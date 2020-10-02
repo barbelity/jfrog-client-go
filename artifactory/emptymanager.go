@@ -38,8 +38,10 @@ type ArtifactoryServicesManager interface {
 	GetUnreferencedGitLfsFiles(params services.GitLfsCleanParams) (*content.ContentReader, error)
 	SearchFiles(params services.SearchParams) (*content.ContentReader, error)
 	Aql(aql string) (io.ReadCloser, error)
-	SetProps(params services.PropsParams) (int, error)
-	DeleteProps(params services.PropsParams) (int, error)
+	SetProps(params services.PropsParams) (successCount, failedCount int, err error)
+	SetPropsWithContentReader(params services.PropsReaderParams) (successCount, failedCount int, err error)
+	DeleteProps(params services.PropsParams) (successCount, failedCount int, err error)
+	DeletePropsWithContentReader(params services.PropsReaderParams) (successCount, failedCount int, err error)
 	UploadFiles(params ...services.UploadParams) (artifactsFileInfo []utils.FileInfo, totalUploaded, totalFailed int, err error)
 	Copy(params services.MoveCopyParams) (successCount, failedCount int, err error)
 	Move(params services.MoveCopyParams) (successCount, failedCount int, err error)
@@ -167,11 +169,19 @@ func (esm *EmptyArtifactoryServicesManager) Aql(aql string) (io.ReadCloser, erro
 	panic("Failed: Method is not implemented")
 }
 
-func (esm *EmptyArtifactoryServicesManager) SetProps(params services.PropsParams) (int, error) {
+func (esm *EmptyArtifactoryServicesManager) SetProps(params services.PropsParams) (successCount, failedCount int, err error) {
 	panic("Failed: Method is not implemented")
 }
 
-func (esm *EmptyArtifactoryServicesManager) DeleteProps(params services.PropsParams) (int, error) {
+func (esm *EmptyArtifactoryServicesManager) SetPropsWithContentReader(params services.PropsReaderParams) (successCount, failedCount int, err error) {
+	panic("Failed: Method is not implemented")
+}
+
+func (esm *EmptyArtifactoryServicesManager) DeleteProps(params services.PropsParams) (successCount, failedCount int, err error) {
+	panic("Failed: Method is not implemented")
+}
+
+func (esm *EmptyArtifactoryServicesManager) DeletePropsWithContentReader(params services.PropsReaderParams) (successCount, failedCount int, err error) {
 	panic("Failed: Method is not implemented")
 }
 

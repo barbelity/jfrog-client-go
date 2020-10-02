@@ -210,18 +210,32 @@ func (sm *ArtifactoryServicesManagerImp) Aql(aql string) (io.ReadCloser, error) 
 	return aqlService.ExecAql(aql)
 }
 
-func (sm *ArtifactoryServicesManagerImp) SetProps(params services.PropsParams) (int, error) {
+func (sm *ArtifactoryServicesManagerImp) SetProps(params services.PropsParams) (successCount, failedCount int, err error) {
 	setPropsService := services.NewPropsService(sm.client)
 	setPropsService.ArtDetails = sm.config.GetServiceDetails()
 	setPropsService.Threads = sm.config.GetThreads()
-	return setPropsService.SetProps(params)
+	return setPropsService.SetDeleteProps(params, false)
 }
 
-func (sm *ArtifactoryServicesManagerImp) DeleteProps(params services.PropsParams) (int, error) {
+func (sm *ArtifactoryServicesManagerImp) SetPropsWithContentReader(params services.PropsReaderParams) (successCount, failedCount int, err error) {
 	setPropsService := services.NewPropsService(sm.client)
 	setPropsService.ArtDetails = sm.config.GetServiceDetails()
 	setPropsService.Threads = sm.config.GetThreads()
-	return setPropsService.DeleteProps(params)
+	return setPropsService.SetPropsWithReader(params)
+}
+
+func (sm *ArtifactoryServicesManagerImp) DeleteProps(params services.PropsParams) (successCount, failedCount int, err error) {
+	setPropsService := services.NewPropsService(sm.client)
+	setPropsService.ArtDetails = sm.config.GetServiceDetails()
+	setPropsService.Threads = sm.config.GetThreads()
+	return setPropsService.SetDeleteProps(params, true)
+}
+
+func (sm *ArtifactoryServicesManagerImp) DeletePropsWithContentReader(params services.PropsReaderParams) (successCount, failedCount int, err error) {
+	setPropsService := services.NewPropsService(sm.client)
+	setPropsService.ArtDetails = sm.config.GetServiceDetails()
+	setPropsService.Threads = sm.config.GetThreads()
+	return setPropsService.DeletePropsWithReader(params)
 }
 
 func (sm *ArtifactoryServicesManagerImp) UploadFiles(params ...services.UploadParams) (artifactsFileInfo []utils.FileInfo, totalUploaded, totalFailed int, err error) {

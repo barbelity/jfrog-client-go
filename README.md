@@ -303,44 +303,48 @@ defer reader.Close()
 Read more about [ContentReader](#using-contentReader).
 
 #### Setting Properties on Files in Artifactory
+##### Setting Properties:
 ```go
-searchParams = services.NewSearchParams()
-searchParams.Recursive = true
-searchParams.IncludeDirs = false
-
-reader, err = rtManager.SearchFiles(searchParams)
-if err != nil {
-    return err
-}
-defer reader.Close()
-propsParams = services.NewPropsParams()
+propsParams := services.NewPropsParams()
 propsParams.Pattern = "repo/*/*.zip"
-propsParams.Reader = reader
-// Filter the files by properties.
-propsParams.Props = "key=value"
+// Properties to add.
+propsParams.Properties = "key=value"
 
 rtManager.SetProps(propsParams)
+```
+
+##### Setting Properties with Content Reader:
+Using the `SetPropsWithContentReader()` function, we can set properties on the files available in a provided reader.
+```go
+propsReaderParams := services.NewPropsReaderParams()
+propsReaderParams.Reader = reader
+// Properties to add.
+propsReaderParams.Properties = "key=value"
+
+rtManager.SetPropsWithContentReader(propsReaderParams)
 ```
 Read more about [ContentReader](#using-contentReader).
 
 #### Deleting Properties from Files in Artifactory
+##### Deleting Properties:
 ```go
-searchParams = services.NewSearchParams()
-searchParams.Recursive = true
-searchParams.IncludeDirs = false
-
-resultItems, err = rtManager.SearchFiles(searchParams)
-if err != nil {
-    return err
-}
-defer reader.Close()
-propsParams = services.NewPropsParams()
+propsParams := services.NewPropsParams()
 propsParams.Pattern = "repo/*/*.zip"
-propsParams.Reader = reader
-// Filter the files by properties.
-propsParams.Props = "key=value"
+// Properties to delete.
+propsParams.Properties = "key=value"
 
 rtManager.DeleteProps(propsParams)
+```
+
+##### Deleting Properties with Content Reader:
+Using the `DeletePropsWithContentReader()` function, we can delete properties from the files available in a provided reader.
+```go
+propsReaderParams := services.NewPropsReaderParams()
+propsReaderParams.Reader = reader
+// Properties to delete.
+propsReaderParams.Properties = "key=value"
+
+rtManager.DeletePropsWithContentReader(propsReaderParams)
 ```
 Read more about [ContentReader](#using-contentReader).
 

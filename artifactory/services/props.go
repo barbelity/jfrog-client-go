@@ -42,47 +42,83 @@ func (ps *PropsService) GetThreads() int {
 	return ps.Threads
 }
 
-func (ps *PropsService) SetProps(propsParams PropsParams) (int, error) {
+func (ps *PropsService) GetJfrogHttpClient() (*rthttpclient.ArtifactoryHttpClient, error) {
+	return ps.client, nil
+}
+
+func (ps *PropsService) SetDeleteProps(propsParams PropsParams, isDelete bool) (successCount, failedCount int, err error) {
+	resultReader, err := ps.performSearch(propsParams)
+	if err != nil || resultReader == nil {
+		return
+	}
+	defer resultReader.Close()
+	propsReaderParams := PropsReaderParams{Reader: resultReader, Properties: propsParams.Properties}
+
+	if isDelete {
+		return ps.DeletePropsWithReader(propsReaderParams)
+	}
+	return ps.SetPropsWithReader(propsReaderParams)
+}
+
+func (ps *PropsService) SetPropsWithReader(propsParams PropsReaderParams) (successCount, failedCount int, err error) {
 	log.Info("Setting properties...")
-	totalSuccess, err := ps.performRequest(propsParams, false)
+	successCount, failedCount, err = ps.performRequest(propsParams.GetReader(), propsParams.GetProperties(), false)
 	if err == nil {
 		log.Info("Done setting properties.")
 	}
-	return totalSuccess, err
+	return
 }
 
-func (ps *PropsService) DeleteProps(propsParams PropsParams) (int, error) {
+func (ps *PropsService) DeletePropsWithReader(propsParams PropsReaderParams) (successCount, failedCount int, err error) {
 	log.Info("Deleting properties...")
-	totalSuccess, err := ps.performRequest(propsParams, true)
+	successCount, failedCount, err = ps.performRequest(propsParams.GetReader(), propsParams.GetProperties(), true)
 	if err == nil {
 		log.Info("Done deleting properties.")
 	}
-	return totalSuccess, err
+	return
 }
 
 type PropsParams struct {
-	Reader *content.ContentReader
-	Props  string
+	*utils.ArtifactoryCommonParams
+	Properties string
 }
 
-func (sp *PropsParams) GetReader() *content.ContentReader {
-	return sp.Reader
+func (pp *PropsParams) GetProperties() string {
+	return pp.Properties
 }
 
-func (sp *PropsParams) GetProps() string {
-	return sp.Props
+func (pp *PropsParams) GetFile() *utils.ArtifactoryCommonParams {
+	return pp.ArtifactoryCommonParams
 }
 
-func (ps *PropsService) performRequest(propsParams PropsParams, isDelete bool) (int, error) {
+func (pp *PropsParams) SetIncludeDir(isIncludeDir bool) {
+	pp.GetFile().IncludeDirs = isIncludeDir
+}
+
+type PropsReaderParams struct {
+	Reader     *content.ContentReader
+	Properties string
+}
+
+func (prp *PropsReaderParams) GetReader() *content.ContentReader {
+	return prp.Reader
+}
+
+func (prp *PropsReaderParams) GetProperties() string {
+	return prp.Properties
+}
+
+func (ps *PropsService) performRequest(reader *content.ContentReader, properties string, isDelete bool) (successCount, failedCount int, err error) {
 	var encodedParam string
 	if !isDelete {
-		props, err := utils.ParseProperties(propsParams.GetProps(), utils.JoinCommas)
+		var props *utils.Properties
+		props, err = utils.ParseProperties(properties, utils.JoinCommas)
 		if err != nil {
-			return 0, err
+			return
 		}
 		encodedParam = props.ToEncodedString()
 	} else {
-		propList := strings.Split(propsParams.GetProps(), ",")
+		propList := strings.Split(properties, ",")
 		for _, prop := range propList {
 			encodedParam += url.QueryEscape(prop) + ","
 		}
@@ -90,13 +126,11 @@ func (ps *PropsService) performRequest(propsParams PropsParams, isDelete bool) (
 		if strings.HasSuffix(encodedParam, ",") {
 			encodedParam = encodedParam[:len(encodedParam)-1]
 		}
-
 	}
 
 	successCounters := make([]int, ps.GetThreads())
 	producerConsumer := parallel.NewBounedRunner(ps.GetThreads(), false)
 	errorsQueue := clientutils.NewErrorsQueue(1)
-	reader := propsParams.GetReader()
 	go func() {
 		for resultItem := new(utils.ResultItem); reader.NextRecord(resultItem) == nil; resultItem = new(utils.ResultItem) {
 			relativePath := resultItem.GetItemRelativePath()
@@ -138,11 +172,16 @@ func (ps *PropsService) performRequest(propsParams PropsParams, isDelete bool) (
 	}()
 
 	producerConsumer.Run()
-	totalSuccess := 0
 	for _, v := range successCounters {
-		totalSuccess += v
+		successCount += v
 	}
-	return totalSuccess, errorsQueue.GetError()
+	totalReaderLength, err := reader.Length()
+	if err != nil {
+		return
+	}
+	failedCount = totalReaderLength - successCount
+	err = errorsQueue.GetError()
+	return
 }
 
 func (ps *PropsService) sendDeleteRequest(logMsgPrefix, relativePath, setPropertiesUrl string) (resp *http.Response, body []byte, err error) {
@@ -161,6 +200,24 @@ func (ps *PropsService) sendPutRequest(logMsgPrefix, relativePath, setProperties
 	return
 }
 
+func (ps *PropsService) performSearch(propsParams PropsParams) (*content.ContentReader, error) {
+	log.Info("Searching items...")
+	switch propsParams.GetSpecType() {
+	case utils.BUILD:
+		return utils.SearchBySpecWithBuild(propsParams.GetFile(), ps)
+	case utils.AQL:
+		return utils.SearchBySpecWithAql(propsParams.GetFile(), ps, utils.NONE)
+	case utils.WILDCARD:
+		propsParams.SetIncludeDir(true)
+		return utils.SearchBySpecWithPattern(propsParams.GetFile(), ps, utils.NONE)
+	}
+	return nil, nil
+}
+
 func NewPropsParams() PropsParams {
 	return PropsParams{}
+}
+
+func NewPropsReaderParams() PropsReaderParams {
+	return PropsReaderParams{}
 }
